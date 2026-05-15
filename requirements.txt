@@ -1,0 +1,30 @@
+# Transcribit — Core dependencies
+# Install with: pip install -r requirements.txt
+
+# Web framework
+fastapi==0.135.1
+uvicorn==0.41.0
+
+# ML / Audio
+torch==2.8.0+cu126
+torchaudio==2.8.0+cu126
+whisperx==3.8.1
+pyannote-audio==4.0.4
+pyannote-core==6.0.1
+pyannote-database==6.1.1
+pyannote-metrics==4.0.0
+pyannote-pipeline==4.0.0
+speechbrain==1.0.3
+pytorch-lightning==2.6.1
+
+# Audio processing
+pydub
+praat-parselmouth
+
+# Numeric / Data
+numpy==2.4.2
+pandas==3.0.1
+scipy==1.17.1
+
+# NOTE: torch with CUDA 12.6 must be installed separately:
+# pip install torch==2.8.0+cu126 torchaudio==2.8.0+cu126 --index-url https://download.pytorch.org/whl/cu126

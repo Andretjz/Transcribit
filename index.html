@@ -1,0 +1,1001 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Transcribit · Audio Intelligence</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
+
+:root {
+  --bg:#090909; --s1:#111; --s2:#161616; --s3:#1c1c1c; --s4:#222;
+  --bdr:#222; --bdr2:#2e2e2e;
+  --gold:#e8c97a; --teal:#6eb5c0; --green:#8fc47a;
+  --coral:#c07a6e; --purple:#a07ec0; --orange:#d4895a;
+  --text:#ddd8d0; --dim:#555550; --mid:#888880;
+  --font-mono:'JetBrains Mono',monospace;
+  --font-display:'Syne',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--font-mono);min-height:100vh}
+
+/* ── HEADER ── */
+header{padding:18px 48px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;background:rgba(9,9,9,.96);backdrop-filter:blur(8px);z-index:100}
+.logo{font-family:var(--font-display);font-weight:800;font-size:18px;color:var(--gold);display:flex;align-items:center;gap:10px}
+.logo-ver{font-size:10px;font-weight:400;color:var(--dim);font-family:var(--font-mono);border:1px solid var(--bdr2);padding:2px 7px;margin-left:4px}
+.hstatus{display:flex;align-items:center;gap:14px;font-size:10px}
+.dot{width:7px;height:7px;border-radius:50%;background:var(--dim);flex-shrink:0;transition:background .3s}
+.dot.ok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot.err{background:var(--coral)}
+.hrow{display:flex;align-items:center;gap:7px;color:var(--dim)}
+.pill{font-size:9px;padding:2px 8px;border:1px solid var(--bdr2);color:var(--dim)}
+.pill.on{border-color:var(--teal);color:var(--teal)}
+
+/* ── NAV TABS ── */
+.nav{display:flex;gap:0;border-bottom:1px solid var(--bdr);margin-bottom:0;overflow-x:auto;position:sticky;top:57px;background:rgba(9,9,9,.97);backdrop-filter:blur(8px);z-index:99}
+.nav-tab{font-size:10px;padding:10px 18px;color:var(--dim);cursor:pointer;border-bottom:2px solid transparent;white-space:nowrap;font-family:var(--font-mono);background:transparent;border-top:none;border-left:none;border-right:none;transition:all .15s}
+.nav-tab:hover{color:var(--mid)}
+.nav-tab.active{color:var(--gold);border-bottom-color:var(--gold)}
+
+/* ── LAYOUT ── */
+.main{max-width:1140px;margin:0 auto;padding:36px 48px}
+.section{display:none}
+.section.active{display:block}
+
+/* ── UPLOAD ── */
+.upload-zone{border:1px dashed var(--bdr2);padding:52px 40px;text-align:center;cursor:pointer;background:var(--s1);transition:border-color .2s,background .2s;position:relative}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--gold);background:rgba(232,201,122,.03)}
+.upload-zone.has-file{border-style:solid;border-color:var(--teal)}
+input[type=file]{display:none}
+.uicon{font-size:28px;margin-bottom:12px}
+.ulabel{font-family:var(--font-display);font-size:15px;font-weight:600;margin-bottom:6px}
+.usub{font-size:10px;color:var(--dim)}
+
+/* ── CONFIG ── */
+.config{margin-top:18px;display:grid;grid-template-columns:1.6fr 1fr 1fr 1fr;gap:10px}
+.field{display:flex;flex-direction:column;gap:5px}
+.field label{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:1.5px}
+.field input,.field select{background:var(--s2);border:1px solid var(--bdr);color:var(--text);padding:9px 13px;font-family:var(--font-mono);font-size:12px;outline:none;transition:border-color .2s;-webkit-appearance:none}
+.field input:focus,.field select:focus{border-color:var(--teal)}
+
+/* ── CONTEXT BADGE ── */
+.ctx-hint{margin-top:10px;font-size:10px;color:var(--dim);padding:8px 12px;background:var(--s2);border-left:2px solid var(--bdr2);display:none}
+.ctx-hint.show{display:block}
+
+/* ── BUTTONS ── */
+.btn{padding:12px 22px;border:none;cursor:pointer;font-family:var(--font-display);font-weight:700;font-size:11px;letter-spacing:2px;text-transform:uppercase;transition:opacity .2s,transform .1s}
+.btn:hover:not(:disabled){opacity:.85;transform:translateY(-1px)}
+.btn:disabled{opacity:.25;cursor:not-allowed;transform:none}
+.btn-run{background:var(--gold);color:#090909;width:100%;margin-top:16px;padding:15px;font-size:12px}
+.btn-ok{background:var(--green);color:#090909;margin-top:12px}
+.btn-skip{background:var(--s3);color:var(--text);border:1px solid var(--bdr);margin-top:12px;margin-left:8px}
+
+/* ── BARS ── */
+.err-bar,.info-bar{display:none;margin-top:16px;padding:12px 18px;font-size:12px;border-left:3px solid}
+.err-bar{background:rgba(192,122,110,.07);border-color:var(--coral);color:var(--coral)}
+.info-bar{background:rgba(110,181,192,.07);border-color:var(--teal);color:var(--teal)}
+.err-bar.show,.info-bar.show{display:block}
+
+/* ── PANEL ── */
+.panel{display:none;margin-top:18px;border:1px solid var(--bdr);background:var(--s1);padding:18px 22px}
+.panel.show{display:block}
+.ph{font-size:9px;color:var(--gold);text-transform:uppercase;letter-spacing:2px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px}
+.ph-sub{font-size:9px;color:var(--dim);font-weight:400;letter-spacing:0}
+
+/* ── PASS TRACKER ── */
+.passes{display:flex;flex-direction:column;gap:7px}
+.pr{display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:1px solid var(--bdr)}
+.pr:last-child{border-bottom:none}
+.pnum{font-family:var(--font-display);font-weight:700;font-size:10px;color:var(--dim);width:28px;flex-shrink:0}
+.pname{font-size:11px;color:var(--mid);flex:1}
+.badge{font-size:9px;padding:3px 8px;border:1px solid var(--bdr);color:var(--dim);text-transform:uppercase;letter-spacing:1px;flex-shrink:0}
+.badge.running{border-color:var(--gold);color:var(--gold);animation:pulse 1.4s infinite}
+.badge.done{border-color:var(--green);color:var(--green)}
+.badge.error{border-color:var(--coral);color:var(--coral)}
+.badge.skip{border-color:var(--dim);color:var(--dim);opacity:.5}
+.ptime{font-size:10px;color:var(--dim);width:56px;text-align:right;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.2}}
+
+/* ── ANALYTICS ── */
+.ag{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.stat{text-align:center;background:var(--s2);padding:14px 8px;border:1px solid var(--bdr)}
+.sl{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px}
+.sv{font-size:16px;font-family:var(--font-display);font-weight:700}
+.gold{color:var(--gold)}.teal{color:var(--teal)}.green{color:var(--green)}
+.coral{color:var(--coral)}.purple{color:var(--purple)}.orange{color:var(--orange)}
+
+/* ── IDENTITY ── */
+.ig{display:flex;flex-direction:column;gap:6px}
+.ir{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--s2);border-left:3px solid var(--bdr)}
+.ir.res{border-left-color:var(--green)}
+.ir.unr{border-left-color:var(--coral)}
+.ir.llm{border-left-color:var(--teal)}
+.il{font-size:10px;color:var(--dim);width:100px;flex-shrink:0}
+.in_{font-size:12px;flex:1}
+.in_.u{color:var(--coral);font-style:italic}
+.ic{font-size:9px;color:var(--dim);padding:2px 6px;border:1px solid var(--bdr)}
+.llm-tag{font-size:8px;padding:2px 5px;border:1px solid var(--teal);color:var(--teal);margin-left:6px}
+
+/* ── BLUEPRINTS ── */
+.bp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:12px}
+.bp-card{background:var(--s2);border:1px solid var(--bdr);padding:18px;display:flex;flex-direction:column;gap:7px}
+.bp-name{font-family:var(--font-display);font-weight:700;font-size:14px;color:var(--gold)}
+.bp-sub{font-size:10px;color:var(--mid);margin-bottom:4px;line-height:1.5}
+.bp-row{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(255,255,255,.04)}
+.bp-lbl{font-size:9px;color:var(--dim);text-transform:uppercase;letter-spacing:.8px}
+.bp-val{font-size:11px;color:var(--text)}
+.bp-bar{width:100%;height:3px;background:var(--s3);margin-top:1px;border-radius:1px;overflow:hidden}
+.bp-fill{height:3px;border-radius:1px;transition:width .6s ease}
+.bp-tags{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.bp-tag{font-size:8px;padding:2px 7px;border:1px solid var(--bdr2);color:var(--mid)}
+.bp-tag.hi{border-color:var(--gold);color:var(--gold)}
+.bp-tag.t{border-color:var(--teal);color:var(--teal)}
+.bp-tag.g{border-color:var(--green);color:var(--green)}
+.bp-tag.c{border-color:var(--coral);color:var(--coral)}
+.bp-tag.p{border-color:var(--purple);color:var(--purple)}
+
+/* ── DENGLISCH ── */
+.deng-summary{display:flex;gap:20px;margin-bottom:14px;flex-wrap:wrap}
+.deng-stat{text-align:center;padding:12px 16px;background:var(--s2);border:1px solid var(--bdr);min-width:90px}
+.deng-sl{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.deng-sv{font-size:18px;font-family:var(--font-display);font-weight:700;color:var(--orange)}
+.deng-words{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.deng-word{font-size:11px;padding:4px 10px;background:rgba(212,137,90,.1);border:1px solid rgba(212,137,90,.3);color:var(--orange)}
+.deng-hits{display:flex;flex-direction:column;gap:6px;max-height:240px;overflow-y:auto}
+.deng-hit{font-size:11px;padding:7px 10px;background:var(--s2);border-left:2px solid var(--orange);color:var(--mid)}
+.deng-hit strong{color:var(--orange)}
+.deng-hit span{color:var(--dim);font-size:9px;margin-left:8px}
+
+/* ── WORD CLOUD ── */
+.wc-tabs{display:flex;gap:7px;margin-bottom:12px;flex-wrap:wrap}
+.wct{font-size:10px;padding:4px 12px;border:1px solid var(--bdr);color:var(--dim);cursor:pointer;background:transparent;font-family:var(--font-mono);transition:all .15s}
+.wct:hover{border-color:var(--teal);color:var(--teal)}
+.wct.on{border-color:var(--gold);color:var(--gold);background:rgba(232,201,122,.07)}
+.wc-wrap{width:100%;background:var(--s2);border:1px solid var(--bdr)}
+#wcCanvas{display:block;width:100%}
+.wc-legend{display:flex;gap:14px;margin-top:10px;flex-wrap:wrap}
+.wc-li{display:flex;align-items:center;gap:6px;font-size:9px;color:var(--dim)}
+.wc-dot{width:7px;height:7px;border-radius:50%}
+.wc-foot{margin-top:7px;font-size:9px;color:var(--dim)}
+
+/* ── DEEP ANALYSIS: INTERVIEW ── */
+.qa-list{display:flex;flex-direction:column;gap:12px}
+.qa-card{background:var(--s2);border:1px solid var(--bdr);padding:16px;border-left:3px solid var(--bdr)}
+.qa-card.good{border-left-color:var(--green)}
+.qa-card.weak{border-left-color:var(--coral)}
+.qa-card.evasive{border-left-color:var(--orange)}
+.qa-q{font-size:12px;color:var(--teal);margin-bottom:6px;line-height:1.5}
+.qa-a{font-size:11px;color:var(--text);margin-bottom:8px;line-height:1.5}
+.qa-meta{display:flex;gap:10px;flex-wrap:wrap}
+.qa-badge{font-size:9px;padding:2px 7px;border:1px solid var(--bdr2);color:var(--dim)}
+.qa-badge.good{border-color:var(--green);color:var(--green)}
+.qa-badge.weak{border-color:var(--coral);color:var(--coral)}
+.qa-badge.evasive{border-color:var(--orange);color:var(--orange)}
+.qa-deviation{font-size:10px;color:var(--orange);margin-top:6px;padding:5px 8px;background:rgba(212,137,90,.08);border-left:2px solid var(--orange)}
+.stats-row{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-bottom:16px}
+.sr-card{background:var(--s2);border:1px solid var(--bdr);padding:12px;text-align:center}
+.sr-lbl{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.sr-val{font-size:18px;font-family:var(--font-display);font-weight:700}
+.overall-box{padding:14px 16px;background:var(--s2);border:1px solid var(--bdr);border-left:3px solid var(--teal);font-size:12px;color:var(--text);line-height:1.6;margin-bottom:16px}
+
+/* ── DEEP ANALYSIS: LANGUAGE PRACTICE ── */
+.lp-obs{display:flex;flex-direction:column;gap:10px}
+.lp-card{background:var(--s2);border:1px solid var(--bdr);padding:14px;border-left:3px solid var(--bdr)}
+.lp-card.grammar{border-left-color:var(--coral)}
+.lp-card.vocabulary{border-left-color:var(--gold)}
+.lp-card.filler{border-left-color:var(--purple)}
+.lp-card.awkward{border-left-color:var(--orange)}
+.lp-card.none{border-left-color:var(--green);opacity:.7}
+.lp-orig{font-size:12px;color:var(--mid);margin-bottom:4px;font-style:italic}
+.lp-corr{font-size:12px;color:var(--green);margin-bottom:4px}
+.lp-alts{display:flex;flex-direction:column;gap:3px;margin-bottom:6px}
+.lp-alt{font-size:11px;color:var(--teal);padding-left:12px}
+.lp-alt::before{content:"→ ";color:var(--dim)}
+.lp-expl{font-size:10px;color:var(--dim);line-height:1.5}
+.lp-type{font-size:9px;padding:2px 6px;border:1px solid var(--bdr2);color:var(--dim);margin-bottom:8px;display:inline-block}
+.fluency-bar{width:100%;height:6px;background:var(--s3);border-radius:3px;margin:8px 0;overflow:hidden}
+.fluency-fill{height:6px;background:linear-gradient(90deg,var(--teal),var(--green));border-radius:3px;transition:width .8s ease}
+.lp-meta{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:14px}
+.lp-meta-card{background:var(--s2);border:1px solid var(--bdr);padding:12px}
+.lp-meta-lbl{font-size:8px;color:var(--dim);text-transform:uppercase;letter-spacing:1px;margin-bottom:5px}
+.lp-meta-val{font-size:13px;color:var(--text);font-family:var(--font-display);font-weight:600}
+
+/* ── DEEP ANALYSIS: LECTURE ── */
+.lecture-topics{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.lecture-topic{font-size:11px;padding:5px 12px;background:rgba(110,181,192,.1);border:1px solid rgba(110,181,192,.25);color:var(--teal)}
+.lecture-obs{display:flex;flex-direction:column;gap:8px}
+.lecture-ob{display:flex;gap:10px;padding:10px;background:var(--s2);border:1px solid var(--bdr)}
+.lecture-ob-time{font-size:10px;color:var(--dim);width:52px;flex-shrink:0;padding-top:1px}
+.lecture-ob-text{font-size:11px;color:var(--text);flex:1;line-height:1.5}
+.lecture-ob-type{font-size:9px;padding:2px 6px;border:1px solid var(--bdr2);color:var(--dim);flex-shrink:0;height:fit-content}
+
+/* ── TRANSCRIPT ── */
+.tx-controls{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.tx-filter{font-size:10px;padding:3px 10px;border:1px solid var(--bdr);color:var(--dim);cursor:pointer;background:transparent;font-family:var(--font-mono)}
+.tx-filter.on{border-color:var(--gold);color:var(--gold)}
+.tb{background:var(--s1);border:1px solid var(--bdr);padding:20px;max-height:560px;overflow-y:auto}
+.tb::-webkit-scrollbar{width:3px}
+.tb::-webkit-scrollbar-thumb{background:var(--bdr2)}
+.seg{display:flex;gap:10px;margin-bottom:11px;padding-bottom:11px;border-bottom:1px solid var(--bdr);align-items:flex-start}
+.seg:last-child{border-bottom:none;margin-bottom:0}
+.seg-t{font-size:10px;color:var(--dim);width:50px;flex-shrink:0;padding-top:2px}
+.seg-s{font-size:10px;padding:2px 8px;flex-shrink:0;white-space:nowrap;background:rgba(232,201,122,.1);color:var(--gold);border:1px solid rgba(232,201,122,.18)}
+.seg-s.u{background:rgba(192,122,110,.1);color:var(--coral);border-color:rgba(192,122,110,.2)}
+.seg-s.llm{background:rgba(110,181,192,.1);color:var(--teal);border-color:rgba(110,181,192,.2)}
+.seg-tone{font-size:9px;padding:2px 6px;color:var(--teal);border:1px solid rgba(110,181,192,.18);flex-shrink:0;align-self:center}
+.seg-txt{font-size:13px;line-height:1.7;color:var(--text);flex:1}
+.llm-mark{font-size:8px;color:var(--teal);margin-left:5px;opacity:.6}
+
+/* ── NAME ASSIGN ── */
+.nr{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.nr-id{font-size:11px;color:var(--coral);width:110px;flex-shrink:0}
+.nr-input{background:var(--s2);border:1px solid var(--coral);color:var(--text);padding:8px 12px;font-family:var(--font-mono);font-size:12px;outline:none;flex:1}
+.nr-input:focus{border-color:var(--gold)}
+.nr-hint{font-size:9px;color:var(--dim)}
+
+/* ── SECTION DIVIDER ── */
+.section-title{font-family:var(--font-display);font-size:13px;font-weight:700;color:var(--mid);margin:28px 0 12px;padding-bottom:8px;border-bottom:1px solid var(--bdr);letter-spacing:.5px}
+
+/* ── GENERAL ANALYSIS ── */
+.key-points{display:flex;flex-direction:column;gap:7px}
+.kp{padding:9px 12px;background:var(--s2);border-left:2px solid var(--teal);font-size:12px;color:var(--text);line-height:1.5}
+.notable{display:flex;flex-direction:column;gap:7px}
+.nb{display:flex;gap:10px;padding:9px;background:var(--s2);border:1px solid var(--bdr)}
+.nb-time{font-size:10px;color:var(--dim);width:52px;flex-shrink:0}
+.nb-text{font-size:11px;color:var(--text);flex:1}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    Transcribit
+    <span class="logo-ver">v6</span>
+  </div>
+  <div class="hstatus">
+    <div class="hrow"><span class="dot" id="hDot"></span><span id="hLbl">checking...</span></div>
+    <div class="pill" id="ollamaPill">ollama: checking</div>
+  </div>
+</header>
+
+<!-- NAV -->
+<div class="nav" id="mainNav" style="padding:0 48px">
+  <button class="nav-tab active" onclick="showSection('upload')">Upload</button>
+  <button class="nav-tab" onclick="showSection('results')" id="navResults" style="display:none">Results</button>
+  <button class="nav-tab" onclick="showSection('analysis')" id="navAnalysis" style="display:none">Deep Analysis</button>
+  <button class="nav-tab" onclick="showSection('transcript')" id="navTranscript" style="display:none">Transcript</button>
+</div>
+
+<div class="main">
+
+<!-- ════════ UPLOAD SECTION ════════ -->
+<div class="section active" id="sec-upload">
+
+  <div class="upload-zone" id="uZone">
+    <input type="file" id="fInput" accept="audio/*,video/*">
+    <div class="uicon">🎙</div>
+    <div class="ulabel" id="uLabel">Drop audio or click to browse</div>
+    <div class="usub">WAV · MP3 · M4A · MP4 · FLAC · OGG</div>
+  </div>
+
+  <div class="config">
+    <div class="field">
+      <label>Hugging Face Token</label>
+      <input type="password" id="hfToken" placeholder="hf_xxxxxxxxxxxxxxxxxxxx">
+    </div>
+    <div class="field">
+      <label>Anthropic API Key <span style="color:#666;font-size:11px">(optional — enables Claude for speaker correction)</span></label>
+      <input type="password" id="anthropicKey" placeholder="sk-ant-xxxxxxxxxxxxxxxxxxxx">
+    </div>
+    <div class="field">
+      <label>Language</label>
+      <select id="lang">
+        <option value="de">German (DE)</option>
+        <option value="en">English (EN)</option>
+        <option value="es">Spanish (ES)</option>
+        <option value="fr">French (FR)</option>
+        <option value="it">Italian (IT)</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Audio Context</label>
+      <select id="context" onchange="updateContextHint()">
+        <option value="unknown">Don't know</option>
+        <option value="interview">Job Interview</option>
+        <option value="language_practice">Language Practice</option>
+        <option value="self_recorded">Self-Recorded Reading</option>
+        <option value="lecture">Lecture / Presentation</option>
+      </select>
+    </div>
+    <div class="field">
+      <label>Speakers (0 = auto)</label>
+      <select id="nSpk">
+        <option value="0">Auto-detect</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+        <option value="4">4</option>
+        <option value="5">5</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="ctx-hint" id="ctxHint"></div>
+
+  <button class="btn btn-run" id="runBtn">Run Analysis</button>
+  <div class="err-bar" id="errBar"></div>
+  <div class="info-bar" id="infoBar"></div>
+
+  <!-- PASS TRACKER -->
+  <div class="panel" id="pTracker">
+    <div class="ph">Processing Pipeline</div>
+    <div class="passes">
+      <div class="pr"><div class="pnum">01</div><div class="pname">Transcription + Word Alignment</div><div class="badge" id="b1">waiting</div><div class="ptime" id="t1"></div></div>
+      <div class="pr"><div class="pnum">02</div><div class="pname">Full-File Diarization + Voice Fingerprints</div><div class="badge" id="b2">waiting</div><div class="ptime" id="t2"></div></div>
+      <div class="pr"><div class="pnum">03</div><div class="pname">Cold-Start Re-Scan · Silence-Chunked</div><div class="badge" id="b3">waiting</div><div class="ptime" id="t3"></div></div>
+      <div class="pr"><div class="pnum">04a</div><div class="pname">Embedding-First Name Resolution</div><div class="badge" id="b4a">waiting</div><div class="ptime" id="t4a"></div></div>
+      <div class="pr"><div class="pnum">04b</div><div class="pname">LLM Speaker Correction · Ollama</div><div class="badge" id="b4b">waiting</div><div class="ptime" id="t4b"></div></div>
+      <div class="pr"><div class="pnum">04c</div><div class="pname" id="p4cName">Deep Analysis · Ollama</div><div class="badge" id="b4c">waiting</div><div class="ptime" id="t4c"></div></div>
+      <div class="pr"><div class="pnum">05</div><div class="pname">Voice Blueprints · Post-Correction Acoustics</div><div class="badge" id="b5">waiting</div><div class="ptime" id="t5"></div></div>
+    </div>
+  </div>
+
+  <!-- NAME ASSIGN -->
+  <div class="panel" id="namePanel">
+    <div class="ph">⚠ Manual Name Assignment</div>
+    <div style="font-size:11px;color:var(--mid);margin-bottom:14px">Enter names for these unresolved speakers.</div>
+    <div id="nameRows"></div>
+    <button class="btn btn-ok" id="confirmBtn">Confirm Names</button>
+    <button class="btn btn-skip" id="skipBtn">Skip</button>
+  </div>
+
+</div><!-- /upload section -->
+
+<!-- ════════ RESULTS SECTION ════════ -->
+<div class="section" id="sec-results">
+
+  <!-- ANALYTICS -->
+  <div class="section-title">Session Overview</div>
+  <div class="ag" id="agGrid"></div>
+
+  <!-- IDENTITY -->
+  <div class="section-title">Speaker Identities</div>
+  <div class="ig" id="idGrid"></div>
+
+  <!-- VOICE BLUEPRINTS -->
+  <div class="section-title">Voice Blueprints · Acoustic DNA</div>
+  <div class="bp-grid" id="bpGrid"></div>
+
+  <!-- DENGLISCH -->
+  <div class="section-title" id="dengTitle" style="display:none">Denglisch / Code-Switching Tracker</div>
+  <div id="dengPanel" style="display:none">
+    <div class="deng-summary" id="dengSummary"></div>
+    <div class="ph" style="margin-top:14px"><span>Most Used English Words in German Context</span></div>
+    <div class="deng-words" id="dengWords"></div>
+    <div class="ph"><span>Occurrences in Context</span></div>
+    <div class="deng-hits" id="dengHits"></div>
+  </div>
+
+  <!-- WORD CLOUD -->
+  <div class="section-title">Word Frequency Cloud</div>
+  <div class="wc-tabs" id="wcTabs"></div>
+  <div class="wc-wrap"><canvas id="wcCanvas"></canvas></div>
+  <div class="wc-legend" id="wcLegend"></div>
+  <div class="wc-foot">Innermost ring = most frequent · 5 frequency layers · <span id="wcStat"></span></div>
+
+</div><!-- /results section -->
+
+<!-- ════════ ANALYSIS SECTION ════════ -->
+<div class="section" id="sec-analysis">
+  <div id="analysisContent">
+    <div style="color:var(--dim);font-size:12px;padding:40px 0;text-align:center">
+      Run analysis first to see deep insights here.
+    </div>
+  </div>
+</div>
+
+<!-- ════════ TRANSCRIPT SECTION ════════ -->
+<div class="section" id="sec-transcript">
+  <div class="tx-controls">
+    <span style="font-size:10px;color:var(--dim);align-self:center">Filter:</span>
+    <button class="tx-filter on" onclick="filterTx('all',this)">All</button>
+    <button class="tx-filter" onclick="filterTx('llm',this)">LLM Corrected</button>
+    <button class="tx-filter" onclick="filterTx('unknown',this)">Unknown</button>
+  </div>
+  <div class="tb" id="txBlock"></div>
+  <div style="margin-top:8px;font-size:10px;color:var(--dim)" id="txNote"></div>
+</div>
+
+</div><!-- /main -->
+
+<script>
+let inputFile=null, pendingData=null, currentWC=null, globalSegs=[];
+const COLORS=['#e8c97a','#6eb5c0','#8fc47a','#c07a6e','#a07ec0'];
+const RLABELS=['Most frequent','High','Medium','Low','Rare'];
+
+const CTX_HINTS={
+  interview:"Interview mode: LLM will track Q&A pairs, detect evasive answers, measure reaction speed, and assess overall candidate performance.",
+  language_practice:"Language practice mode: LLM will analyze pronunciation patterns, suggest native-like alternatives, flag grammar issues, and score fluency.",
+  self_recorded:"Self-recorded mode: Upload a reading or speech sample to get detailed language feedback, corrections, and improvement suggestions.",
+  lecture:"Lecture mode: LLM will segment topics, analyze delivery quality, and identify key concepts and audience level.",
+  unknown:"General mode: LLM will identify content type, extract key points, and provide general transcript intelligence."
+};
+
+// ── HEALTH ──────────────────────────────────────────────────
+async function checkHealth(){
+  try{
+    const d=await(await fetch('http://127.0.0.1:8000/health')).json();
+    document.getElementById('hDot').className='dot ok';
+    document.getElementById('hLbl').innerText=`${d.gpu} · ${d.vram_free_gb}GB`;
+    const op=document.getElementById('ollamaPill');
+    if(d.ollama==='online'){op.className='pill on';op.innerText=`ollama: ${d.ollama_model} ✓`}
+    else{op.className='pill';op.innerText='ollama: offline'}
+  }catch{
+    document.getElementById('hDot').className='dot err';
+    document.getElementById('hLbl').innerText='server offline';
+  }
+}
+checkHealth(); setInterval(checkHealth,15000);
+
+// ── SECTION NAV ─────────────────────────────────────────────
+function showSection(id){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.getElementById('sec-'+id).classList.add('active');
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  event.target.classList.add('active');
+}
+function showNav(ids){
+  ids.forEach(id=>{
+    const el=document.getElementById('nav'+id.charAt(0).toUpperCase()+id.slice(1));
+    if(el) el.style.display='';
+  });
+}
+
+// ── CONTEXT HINT ─────────────────────────────────────────────
+function updateContextHint(){
+  const ctx=document.getElementById('context').value;
+  const hint=document.getElementById('ctxHint');
+  if(ctx==='unknown'){hint.className='ctx-hint';return}
+  hint.className='ctx-hint show';
+  hint.innerText=CTX_HINTS[ctx]||'';
+  document.getElementById('p4cName').innerText=
+    'Deep Analysis · '+ctx.replace('_',' ').replace(/\b\w/g,c=>c.toUpperCase())+' · Ollama';
+}
+
+// ── FILE ────────────────────────────────────────────────────
+const uZone=document.getElementById('uZone');
+const fIn=document.getElementById('fInput');
+uZone.onclick=()=>fIn.click();
+fIn.onchange=e=>{if(e.target.files.length)setFile(e.target.files[0])};
+uZone.ondragover=e=>{e.preventDefault();uZone.classList.add('drag')};
+uZone.ondragleave=()=>uZone.classList.remove('drag');
+uZone.ondrop=e=>{e.preventDefault();uZone.classList.remove('drag');if(e.dataTransfer.files.length)setFile(e.dataTransfer.files[0])};
+function setFile(f){inputFile=f;document.getElementById('uLabel').innerText=`${f.name}  (${(f.size/1e6).toFixed(1)} MB)`;uZone.classList.add('has-file')}
+
+// ── BADGES ──────────────────────────────────────────────────
+function badge(id,state,t){
+  const b=document.getElementById(`b${id}`);
+  b.className=`badge ${state}`;
+  b.innerText=state==='running'?'running…':state;
+  if(t) document.getElementById(`t${id}`).innerText=`${t}s`;
+}
+function resetBadges(){
+  ['1','2','3','4a','4b','4c','5'].forEach(n=>{
+    const b=document.getElementById(`b${n}`);
+    if(b){b.className='badge';b.innerText='waiting'}
+    const t=document.getElementById(`t${n}`);
+    if(t) t.innerText='';
+  });
+}
+
+// ── RUN ─────────────────────────────────────────────────────
+document.getElementById('runBtn').onclick=async()=>{
+  if(!inputFile){alert('Select an audio file first.');return}
+  const tok=document.getElementById('hfToken').value.trim();
+  if(!tok){alert('HuggingFace token required.');return}
+
+  const btn=document.getElementById('runBtn');
+  btn.disabled=true;
+  document.getElementById('errBar').className='err-bar';
+  document.getElementById('pTracker').classList.add('show');
+  resetBadges(); pendingData=null;
+  badge('1','running');
+
+  const timers=[
+    setTimeout(()=>{badge('1','done');badge('2','running')},10000),
+    setTimeout(()=>{badge('2','done');badge('3','running')},65000),
+    setTimeout(()=>{badge('3','done');badge('4a','running')},115000),
+    setTimeout(()=>{badge('4a','done');badge('4b','running')},130000),
+    setTimeout(()=>{badge('4b','done');badge('4c','running')},160000),
+    setTimeout(()=>{badge('4c','done');badge('5','running')},200000),
+  ];
+
+  const fd=new FormData();
+  fd.append('audio',inputFile);
+  fd.append('hf_token',tok);
+  fd.append('num_speakers',document.getElementById('nSpk').value);
+  fd.append('language',document.getElementById('lang').value);
+  fd.append('context',document.getElementById('context').value);
+  const anthropicKey = document.getElementById('anthropicKey');
+  if(anthropicKey && anthropicKey.value.trim())
+    fd.append('anthropic_key', anthropicKey.value.trim());
+
+  try{
+    const res=await fetch('http://127.0.0.1:8000/process',{method:'POST',body:fd});
+    timers.forEach(clearTimeout);
+    const data=await res.json();
+    if(!res.ok) throw new Error(JSON.stringify(data));
+
+    const pt=data.analytics.pass_times;
+    badge('1','done',pt.pass1);
+    badge('2','done',pt.pass2);
+    badge('3','done',pt.pass3);
+    badge('4a','done',pt.pass4a);
+    badge('4b',pt.pass4b>0?'done':'skip',pt.pass4b||null);
+    badge('4c',pt.pass4c>0?'done':'skip',pt.pass4c||null);
+    badge('5','done',pt.pass5);
+
+    globalSegs=data.segments;
+    renderAll(data);
+    showNav(['results','analysis','transcript']);
+
+    // Auto-navigate to results
+    setTimeout(()=>{
+      document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+      document.getElementById('navResults').classList.add('active');
+      showSection('results'); // This triggers showSection without event
+      document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+      document.getElementById('sec-results').classList.add('active');
+    },400);
+
+  }catch(e){
+    timers.forEach(clearTimeout);
+    ['1','2','3','4a','4b','4c','5'].forEach(n=>badge(n,'error'));
+    const eb=document.getElementById('errBar');
+    eb.className='err-bar show';
+    eb.innerText=`Error: ${e.message}`;
+  }finally{btn.disabled=false}
+};
+
+// ── RENDER ALL ───────────────────────────────────────────────
+function renderAll(data){
+  renderAnalytics(data.analytics);
+  renderIdentity(data.identity_report);
+  renderBlueprints(data.acoustic_profiles);
+  if(data.denglisch && data.denglisch.count>0){
+    renderDenglisch(data.denglisch,data.analytics);
+  }
+  if(data.word_frequency) renderWC(data.word_frequency);
+  renderTranscript(data.segments);
+  if(data.deep_analysis) renderDeepAnalysis(data.deep_analysis,data.context,data.analytics);
+}
+
+// ── ANALYTICS ───────────────────────────────────────────────
+function renderAnalytics(a){
+  const g=document.getElementById('agGrid');
+  g.innerHTML=`
+    <div class="stat"><div class="sl">Total Time</div><div class="sv teal">${a.processing_time}</div></div>
+    <div class="stat"><div class="sl">Words</div><div class="sv">${a.words}</div></div>
+    <div class="stat"><div class="sl">Speakers</div><div class="sv teal">${a.speakers_detected}</div></div>
+    <div class="stat"><div class="sl">Identified</div><div class="sv green">${a.speakers_resolved}/${a.speakers_detected}</div></div>
+    <div class="stat"><div class="sl">LLM</div><div class="sv purple">${a.llm_used?'✓ on':'offline'}</div></div>
+    <div class="stat"><div class="sl">Corrections</div><div class="sv orange">${a.llm_corrections||0}</div></div>
+    <div class="stat"><div class="sl">Analysis</div><div class="sv gold">${a.analysis_status.split('(')[0].trim()}</div></div>
+  `;
+}
+
+// ── IDENTITY ────────────────────────────────────────────────
+function renderIdentity(report){
+  const g=document.getElementById('idGrid');g.innerHTML='';
+  Object.entries(report||{}).forEach(([id,d])=>{
+    const isR=d.resolved_name&&d.resolved_name!==id;
+    const isLLM=d.llm_corrected;
+    const row=document.createElement('div');
+    row.className=`ir ${isLLM?'llm':isR?'res':'unr'}`;
+    row.innerHTML=`
+      <div class="il">${id}</div>
+      <div style="color:var(--dim);font-size:10px">→</div>
+      <div class="in_ ${isR?'':'u'}">${isR?d.resolved_name:'⚠ Unresolved'}${isLLM?'<span class="llm-tag">LLM</span>':''}</div>
+      <div class="ic">${d.confidence?Math.round(d.confidence*100)+'%':d.evidence_hits+' hits'}</div>
+    `;
+    g.appendChild(row);
+  });
+}
+
+// ── BLUEPRINTS ──────────────────────────────────────────────
+function renderBlueprints(profiles){
+  if(!profiles||!Object.keys(profiles).length) return;
+  const g=document.getElementById('bpGrid');g.innerHTML='';
+  const allPitch=Object.values(profiles).map(p=>p.avg_pitch_hz);
+  const allWpm=Object.values(profiles).map(p=>p.speaking_rate_wpm);
+  const allHnr=Object.values(profiles).map(p=>p.voice_quality_hnr);
+  const maxP=Math.max(...allPitch)||1,maxW=Math.max(...allWpm)||1,maxH=Math.max(...allHnr)||1;
+  Object.entries(profiles).forEach(([name,p])=>{
+    const pp=Math.round((p.avg_pitch_hz/maxP)*100);
+    const wp=Math.round((p.speaking_rate_wpm/maxW)*100);
+    const hp=Math.min(100,Math.round((p.voice_quality_hnr/maxH)*100));
+    const ec=p.expressiveness==='Expressive'?'hi':p.expressiveness==='Moderate'?'t':'';
+    const pc=p.pace==='Fast'?'c':p.pace==='Slow'?'p':'g';
+    const qc=p.voice_quality_label==='Clear'?'g':p.voice_quality_label==='Breathy'?'c':'';
+    const gc=p.gender_hint.includes('female')?'t':p.gender_hint.includes('male')?'p':'';
+    const card=document.createElement('div');card.className='bp-card';
+    card.innerHTML=`
+      <div><div class="bp-name">${name}</div><div class="bp-sub">${p.profile_label}</div></div>
+      <div class="bp-row"><span class="bp-lbl">Avg Pitch</span><span class="bp-val">${p.avg_pitch_hz} Hz</span></div>
+      <div class="bp-bar"><div class="bp-fill" style="width:${pp}%;background:var(--gold)"></div></div>
+      <div class="bp-row"><span class="bp-lbl">Median Pitch</span><span class="bp-val">${p.median_pitch_hz} Hz</span></div>
+      <div class="bp-row"><span class="bp-lbl">Pitch Range</span><span class="bp-val">${p.pitch_range_hz} Hz</span></div>
+      <div class="bp-row"><span class="bp-lbl">Variability ±</span><span class="bp-val">${p.pitch_variability_std} Hz</span></div>
+      <div class="bp-row"><span class="bp-lbl">Energy</span><span class="bp-val">${p.avg_energy_db} dB</span></div>
+      <div class="bp-row"><span class="bp-lbl">Voice Quality (HNR)</span><span class="bp-val">${p.voice_quality_hnr} · ${p.voice_quality_label}</span></div>
+      <div class="bp-bar"><div class="bp-fill" style="width:${hp}%;background:var(--teal)"></div></div>
+      <div class="bp-row"><span class="bp-lbl">Speaking Rate</span><span class="bp-val">${p.speaking_rate_wpm} wpm</span></div>
+      <div class="bp-bar"><div class="bp-fill" style="width:${wp}%;background:var(--green)"></div></div>
+      <div class="bp-row"><span class="bp-lbl">Speech Duration</span><span class="bp-val">${p.total_speech_seconds}s · ${p.segments_analyzed} segs</span></div>
+      <div class="bp-tags">
+        <span class="bp-tag ${ec}">${p.expressiveness}</span>
+        <span class="bp-tag ${pc}">${p.pace} pace</span>
+        <span class="bp-tag ${qc}">${p.voice_quality_label} voice</span>
+        <span class="bp-tag ${gc}">${p.gender_hint}</span>
+      </div>
+    `;
+    g.appendChild(card);
+  });
+}
+
+// ── DENGLISCH ────────────────────────────────────────────────
+function renderDenglisch(d, analytics){
+  document.getElementById('dengTitle').style.display='';
+  document.getElementById('dengPanel').style.display='';
+  const summary=document.getElementById('dengSummary');
+  summary.innerHTML=`
+    <div class="deng-stat"><div class="deng-sl">Total Instances</div><div class="deng-sv">${d.count}</div></div>
+    <div class="deng-stat"><div class="deng-sl">Unique Words</div><div class="deng-sv">${d.top_words.length}</div></div>
+    <div class="deng-stat"><div class="deng-sl">Density</div><div class="deng-sv">${d.rate}%</div></div>
+    <div class="deng-stat" style="flex:1;text-align:left;padding:12px 16px">
+      <div class="deng-sl">Assessment</div>
+      <div style="font-size:11px;color:var(--mid);margin-top:4px">${d.note}</div>
+    </div>
+  `;
+  const words=document.getElementById('dengWords');
+  words.innerHTML='';
+  d.top_words.forEach(w=>{
+    const el=document.createElement('div');el.className='deng-word';
+    el.innerHTML=`${w.word} <span style="font-size:9px;opacity:.6">×${w.count}</span>`;
+    words.appendChild(el);
+  });
+  const hits=document.getElementById('dengHits');
+  hits.innerHTML='';
+  d.hits.slice(0,30).forEach(h=>{
+    const el=document.createElement('div');el.className='deng-hit';
+    const ctx=h.context.replace(new RegExp(`\\b${h.word}\\b`,'gi'),
+      `<strong>${h.word}</strong>`);
+    el.innerHTML=`${ctx}<span>[${h.time}s · ${h.speaker}]</span>`;
+    hits.appendChild(el);
+  });
+}
+
+// ── WORD CLOUD ───────────────────────────────────────────────
+function renderWC(wd){
+  currentWC=wd;
+  document.getElementById('wcStat').innerText=
+    `${wd.total_unique_words} unique · ${wd.total_word_tokens} tokens`;
+  const tabs=document.getElementById('wcTabs');tabs.innerHTML='';
+  const views={Global:wd.global};
+  Object.entries(wd.by_speaker||{}).forEach(([s,w])=>{views[s]=w});
+  Object.keys(views).forEach((label,i)=>{
+    const b=document.createElement('button');
+    b.className=`wct ${i===0?'on':''}`;b.innerText=label;
+    b.onclick=()=>{
+      document.querySelectorAll('.wct').forEach(x=>x.classList.remove('on'));
+      b.classList.add('on');drawCloud(views[label]);
+    };
+    tabs.appendChild(b);
+  });
+  const leg=document.getElementById('wcLegend');leg.innerHTML='';
+  COLORS.forEach((c,i)=>{
+    const d=document.createElement('div');d.className='wc-li';
+    d.innerHTML=`<div class="wc-dot" style="background:${c}"></div>${RLABELS[i]}`;
+    leg.appendChild(d);
+  });
+  drawCloud(wd.global);
+}
+
+function drawCloud(words){
+  if(!words||!words.length) return;
+  const canvas=document.getElementById('wcCanvas');
+  const W=canvas.parentElement.clientWidth;
+  const H=Math.min(W*0.7,620);
+  canvas.width=W;canvas.height=H;
+  canvas.style.height=H+'px';
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H/2;
+  const R=Math.min(W,H)/2-10;
+  const thresh=[0.72,0.45,0.25,0.12,0.0];
+  const fonts=[[42,64],[25,42],[16,26],[11,16],[8,11]];
+  const radii=[
+    [0,R*0.16],[R*0.17,R*0.36],[R*0.37,R*0.59],[R*0.60,R*0.78],[R*0.79,R*0.97]
+  ];
+  const buckets=[[],[],[],[],[]];
+  words.forEach(item=>{
+    for(let r=0;r<thresh.length;r++){
+      if(item.weight>=thresh[r]){buckets[r].push(item);break}
+    }
+  });
+  const placed=[];
+  function hits(x,y,w,h,pad=5){
+    for(const b of placed){
+      if(x-pad<b.x+b.w&&x+w+pad>b.x&&y-pad<b.y+b.h&&y+h+pad>b.y) return true;
+    }
+    return false;
+  }
+  buckets.forEach((ring,ri)=>{
+    if(!ring.length) return;
+    const color=COLORS[ri];
+    const [fMin,fMax]=fonts[ri];
+    const [rMin,rMax]=radii[ri];
+    const rMax_=ring[0].weight,rMin_=ring[ring.length-1].weight;
+    ring.forEach((item,wi)=>{
+      const norm=rMax_===rMin_?0.5:(item.weight-rMin_)/(rMax_-rMin_);
+      const fs=Math.round(fMin+norm*(fMax-fMin));
+      ctx.font=`${fs>16?'700':'400'} ${fs}px Syne,sans-serif`;
+      ctx.fillStyle=color;
+      const tw=ctx.measureText(item.word).width,th=fs;
+      if(ri===0){
+        const totalH=ring.length*(th+5);
+        const y=cy-totalH/2+wi*(th+5)+th;
+        const x=cx-tw/2;
+        if(!hits(x,y-th,tw,th)){ctx.fillText(item.word,x,y);placed.push({x,y:y-th,w:tw,h:th})}
+        return;
+      }
+      const aStep=(Math.PI*2)/Math.max(ring.length,1);
+      const baseA=wi*aStep+(ri*Math.PI*0.31);
+      let ok=false;
+      for(let att=0;att<700&&!ok;att++){
+        const angle=baseA+att*0.14;
+        const r=rMin+((att*3.1)%(rMax-rMin||1));
+        const x=cx+r*Math.cos(angle)-tw/2;
+        const y=cy+r*Math.sin(angle)+th/3;
+        if(x<2||x+tw>W-2||y-th<2||y>H-2) continue;
+        if(!hits(x,y-th,tw,th)){ctx.fillText(item.word,x,y);placed.push({x,y:y-th,w:tw,h:th});ok=true}
+      }
+    });
+  });
+}
+window.addEventListener('resize',()=>{
+  if(!currentWC) return;
+  const a=document.querySelector('.wct.on');
+  if(!a) return;
+  const d=a.innerText==='Global'?currentWC.global:currentWC.by_speaker[a.innerText];
+  if(d) drawCloud(d);
+});
+
+// ── DEEP ANALYSIS ────────────────────────────────────────────
+function renderDeepAnalysis(da, context, analytics){
+  const el=document.getElementById('analysisContent');
+  if(!da){el.innerHTML='<div style="color:var(--dim);font-size:12px;padding:40px 0;text-align:center">No analysis data returned.</div>';return}
+
+  if(context==='interview') renderInterviewAnalysis(el, da);
+  else if(context==='language_practice'||context==='self_recorded') renderLanguageAnalysis(el, da);
+  else if(context==='lecture') renderLectureAnalysis(el, da);
+  else renderGeneralAnalysis(el, da);
+}
+
+function renderInterviewAnalysis(el, da){
+  const cs=da.candidate_stats||{};
+  const qas=da.qa_pairs||[];
+  el.innerHTML=`
+    <div class="section-title">Interview Topic</div>
+    <div class="overall-box" style="border-left-color:var(--gold);font-family:var(--font-display);font-size:14px;font-weight:700">${da.topic||'Not identified'}</div>
+
+    <div class="section-title">Candidate Performance</div>
+    <div class="stats-row">
+      <div class="sr-card"><div class="sr-lbl">Questions</div><div class="sr-val teal">${cs.total_questions||0}</div></div>
+      <div class="sr-card"><div class="sr-lbl">On-Topic</div><div class="sr-val green">${cs.answered_on_topic||0}</div></div>
+      <div class="sr-card"><div class="sr-lbl">Deviated</div><div class="sr-val coral">${cs.deviated||0}</div></div>
+      <div class="sr-card"><div class="sr-lbl">Avg Reaction</div><div class="sr-val orange">${cs.avg_reaction_seconds||'?'}s</div></div>
+      <div class="sr-card"><div class="sr-lbl">Comprehension</div><div class="sr-val purple">${cs.comprehension_rate||0}%</div></div>
+    </div>
+    <div class="overall-box">${cs.overall_assessment||''}</div>
+
+    ${da.key_topics_mentioned?.length?`
+    <div class="section-title">Key Topics Mentioned</div>
+    <div class="lecture-topics">${da.key_topics_mentioned.map(t=>`<div class="lecture-topic">${t}</div>`).join('')}</div>
+    `:''}
+
+    <div class="section-title">Q&A Breakdown (${qas.length} pairs)</div>
+    <div class="qa-list" id="qaList"></div>
+
+    ${da.interviewer_notes?`
+    <div class="section-title">Interviewer Notes</div>
+    <div class="overall-box" style="border-left-color:var(--mid)">${da.interviewer_notes}</div>
+    `:''}
+  `;
+  const list=document.getElementById('qaList');
+  qas.forEach((qa,i)=>{
+    const qual=qa.quality||'adequate';
+    const cls=qual==='strong'||qual==='adequate'?'good':qual==='evasive'?'evasive':'weak';
+    const div=document.createElement('div');div.className=`qa-card ${cls}`;
+    div.innerHTML=`
+      <div class="qa-q">Q${i+1}: ${qa.question||'(question not extracted)'}</div>
+      <div class="qa-a">${qa.answer_text||''}</div>
+      ${qa.deviation_note?`<div class="qa-deviation">⚠ ${qa.deviation_note}</div>`:''}
+      <div class="qa-meta">
+        <span class="qa-badge ${cls}">${qual}</span>
+        ${qa.reaction_seconds!=null?`<span class="qa-badge">⏱ ${qa.reaction_seconds}s reaction</span>`:''}
+        ${qa.understood!=null?`<span class="qa-badge ${qa.understood?'good':'weak'}">${qa.understood?'understood':'may not have understood'}</span>`:''}
+        ${qa.on_topic!=null?`<span class="qa-badge ${qa.on_topic?'good':'evasive'}">${qa.on_topic?'on-topic':'off-topic'}</span>`:''}
+      </div>
+    `;
+    list.appendChild(div);
+  });
+}
+
+function renderLanguageAnalysis(el, da){
+  const obs=da.language_observations||[];
+  const fs=da.fluency_score||0;
+  el.innerHTML=`
+    <div class="section-title">Fluency Assessment</div>
+    <div class="lp-meta">
+      <div class="lp-meta-card"><div class="lp-meta-lbl">Overall Fluency</div><div class="lp-meta-val gold">${da.overall_fluency||'?'}</div></div>
+      <div class="lp-meta-card"><div class="lp-meta-lbl">Fluency Score</div><div class="lp-meta-val teal">${fs}/100</div></div>
+      <div class="lp-meta-card"><div class="lp-meta-lbl">Vocabulary Level</div><div class="lp-meta-val purple">${da.vocabulary_level||'?'}</div></div>
+    </div>
+    <div class="fluency-bar"><div class="fluency-fill" style="width:${fs}%"></div></div>
+
+    ${da.strengths?.length?`
+    <div class="section-title">Strengths</div>
+    <div class="key-points">${da.strengths.map(s=>`<div class="kp">✓ ${s}</div>`).join('')}</div>
+    `:''}
+
+    ${da.improvement_areas?.length?`
+    <div class="section-title">Areas to Improve</div>
+    <div class="key-points">${da.improvement_areas.map(s=>`<div class="kp" style="border-left-color:var(--coral)">→ ${s}</div>`).join('')}</div>
+    `:''}
+
+    ${da.recommended_focus?`
+    <div class="section-title">Recommended Focus</div>
+    <div class="overall-box">${da.recommended_focus}</div>
+    `:''}
+
+    ${da.filler_words?.length?`
+    <div class="section-title">Filler Words</div>
+    <div class="deng-words">${da.filler_words.map(f=>`<div class="deng-word">${f.word} <span style="font-size:9px;opacity:.6">×${f.count}</span></div>`).join('')}</div>
+    `:''}
+
+    ${da.pronunciation_notes?`
+    <div class="section-title">Pronunciation Notes</div>
+    <div class="overall-box" style="border-left-color:var(--teal)">${da.pronunciation_notes}</div>
+    `:''}
+
+    <div class="section-title">Segment-by-Segment Observations (${obs.length})</div>
+    <div class="lp-obs" id="lpObs"></div>
+  `;
+  const container=document.getElementById('lpObs');
+  obs.forEach(ob=>{
+    const type=ob.issue_type||'none';
+    const div=document.createElement('div');div.className=`lp-card ${type}`;
+    div.innerHTML=`
+      <div class="lp-type">${type.replace('_',' ')} · ${ob.timestamp||'?'}s · ${ob.speaker||'?'}</div>
+      <div class="lp-orig">"${ob.original||''}"</div>
+      ${ob.correction?`<div class="lp-corr">✓ ${ob.correction}</div>`:''}
+      ${ob.native_alternatives?.length?`
+        <div class="lp-alts">${ob.native_alternatives.map(a=>`<div class="lp-alt">${a}</div>`).join('')}</div>
+      `:''}
+      ${ob.explanation?`<div class="lp-expl">${ob.explanation}</div>`:''}
+    `;
+    container.appendChild(div);
+  });
+}
+
+function renderLectureAnalysis(el, da){
+  const obs=da.delivery_observations||[];
+  el.innerHTML=`
+    <div class="section-title">Topic</div>
+    <div class="overall-box" style="font-family:var(--font-display);font-size:14px;font-weight:700;border-left-color:var(--gold)">${da.topic||'Not identified'}</div>
+
+    ${da.subtopics?.length?`
+    <div class="section-title">Subtopics</div>
+    <div class="lecture-topics">${da.subtopics.map(t=>`<div class="lecture-topic">${t}</div>`).join('')}</div>
+    `:''}
+
+    <div class="section-title">Structure</div>
+    <div class="stats-row">
+      <div class="sr-card"><div class="sr-lbl">Introduction</div><div class="sr-val ${da.structure?.introduction_present?'green':'coral'}">${da.structure?.introduction_present?'✓':'✗'}</div></div>
+      <div class="sr-card"><div class="sr-lbl">Conclusion</div><div class="sr-val ${da.structure?.conclusion_present?'green':'coral'}">${da.structure?.conclusion_present?'✓':'✗'}</div></div>
+      <div class="sr-card"><div class="sr-lbl">Flow</div><div class="sr-val teal">${da.structure?.logical_flow||'?'}</div></div>
+      <div class="sr-card"><div class="sr-lbl">Transitions</div><div class="sr-val purple">${da.structure?.transitions_quality||'?'}</div></div>
+    </div>
+
+    ${da.key_concepts?.length?`
+    <div class="section-title">Key Concepts</div>
+    <div class="lecture-topics">${da.key_concepts.map(t=>`<div class="lecture-topic" style="border-color:rgba(160,126,192,.3);background:rgba(160,126,192,.08);color:var(--purple)">${t}</div>`).join('')}</div>
+    `:''}
+
+    ${da.summary?`
+    <div class="section-title">Summary</div>
+    <div class="overall-box">${da.summary}</div>
+    `:''}
+
+    <div class="section-title">Delivery Observations</div>
+    <div class="lecture-obs">${obs.map(o=>`
+      <div class="lecture-ob">
+        <div class="lecture-ob-time">[${o.timestamp||'?'}s]</div>
+        <div class="lecture-ob-text">${o.observation||''}</div>
+        <div class="lecture-ob-type">${o.type||''}</div>
+      </div>
+    `).join('')}</div>
+  `;
+}
+
+function renderGeneralAnalysis(el, da){
+  el.innerHTML=`
+    <div class="section-title">Content Type · ${da.content_type||'Unknown'}</div>
+    <div class="overall-box" style="font-family:var(--font-display);font-weight:700;font-size:14px;border-left-color:var(--gold)">${da.topic||'Topic not identified'}</div>
+
+    ${da.summary?`
+    <div class="section-title">Summary</div>
+    <div class="overall-box">${da.summary}</div>
+    `:''}
+
+    ${da.key_points?.length?`
+    <div class="section-title">Key Points</div>
+    <div class="key-points">${da.key_points.map(p=>`<div class="kp">${p}</div>`).join('')}</div>
+    `:''}
+
+    ${da.language_quality?`
+    <div class="section-title">Language Quality</div>
+    <div class="overall-box" style="border-left-color:var(--teal)">${da.language_quality}</div>
+    `:''}
+
+    ${da.notable_moments?.length?`
+    <div class="section-title">Notable Moments</div>
+    <div class="notable">${da.notable_moments.map(n=>`
+      <div class="nb"><div class="nb-time">[${n.timestamp||'?'}s]</div><div class="nb-text">${n.observation||''}</div></div>
+    `).join('')}</div>
+    `:''}
+  `;
+}
+
+// ── TRANSCRIPT ───────────────────────────────────────────────
+function renderTranscript(segs){
+  globalSegs=segs;
+  const txNote=document.getElementById('txNote');
+  const llmCount=segs.filter(s=>s.llm_corrected).length;
+  txNote.innerText=llmCount>0
+    ?`✦ ${llmCount} segments corrected by LLM · teal labels indicate LLM-assigned speaker`
+    :'No LLM speaker corrections applied.';
+  txNote.style.color=llmCount>0?'var(--teal)':'var(--dim)';
+  filterTx('all');
+}
+
+function filterTx(mode, btn){
+  if(btn){
+    document.querySelectorAll('.tx-filter').forEach(b=>b.classList.remove('on'));
+    btn.classList.add('on');
+  }
+  const block=document.getElementById('txBlock');block.innerHTML='';
+  let segs=globalSegs;
+  if(mode==='llm') segs=segs.filter(s=>s.llm_corrected);
+  if(mode==='unknown') segs=segs.filter(s=>s.speaker==='UNKNOWN');
+  segs.forEach(seg=>{
+    const isU=seg.speaker==='UNKNOWN';
+    const isLLM=seg.llm_corrected;
+    const div=document.createElement('div');div.className='seg';
+    div.innerHTML=`
+      <div class="seg-t">[${seg.start}s]</div>
+      <div class="seg-s ${isU?'u':isLLM?'llm':''}">${seg.speaker}</div>
+      <div class="seg-tone">${seg.tone}</div>
+      <div class="seg-txt">${seg.text}${isLLM?'<span class="llm-mark">✦</span>':''}</div>
+    `;
+    block.appendChild(div);
+  });
+  if(!segs.length){
+    block.innerHTML='<div style="color:var(--dim);font-size:11px;padding:20px 0;text-align:center">No segments match this filter.</div>';
+  }
+}
+</script>
+</body>
+</html>

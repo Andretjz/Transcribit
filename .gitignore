@@ -216,3 +216,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Transcribit Custom Ignores
+models_cache/
+wav2vec2_checkpoints/
+
+# IDE Configuration
+.vscode/
